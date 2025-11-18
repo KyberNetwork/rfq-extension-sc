@@ -29,7 +29,7 @@ contract TimeWeightedAmountGetter is AmountGetterBase {
     bytes calldata extraData
   ) internal view override returns (uint256) {
     (uint256 startTime, uint256 endTime, uint256 exponent, uint256 maxVarianceBps) =
-      decodeConfidenceValue(extraData);
+      _decodeExtraData(extraData);
     uint256 expirationTime = order.makerTraits.getExpirationTime();
 
     if (exponent > 0 && block.timestamp > startTime) {
@@ -60,7 +60,7 @@ contract TimeWeightedAmountGetter is AmountGetterBase {
   }
 
   // @dev equivalent to abi.decode(extraData, (uint256, uint256, uint256, uint256))
-  function decodeConfidenceValue(bytes calldata extraData)
+  function _decodeExtraData(bytes calldata extraData)
     internal
     pure
     returns (uint256 startTime, uint256 endTime, uint256 exponent, uint256 maxVarianceBps)
