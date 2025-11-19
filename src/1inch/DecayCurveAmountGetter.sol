@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import {console} from 'forge-std/console.sol';
 import {CalldataDecoder} from 'ks-common-sc/src/libraries/calldata/CalldataDecoder.sol';
 import {
   AmountGetterBase,
@@ -21,6 +20,7 @@ contract DecayCurveAmountGetter is AmountGetterBase {
   using MakerTraitsLib for MakerTraits;
   using FixedPointMathLib for int256;
   using CalldataDecoder for bytes;
+
   error TakingAmountNotSupported();
   error ExponentTooHigh();
   error AmplificationFactorTooHigh();
@@ -46,7 +46,7 @@ contract DecayCurveAmountGetter is AmountGetterBase {
     address,
     /* taker */
     uint256 requestedTakingAmount,
-    uint256 remainingMakingAmount,
+    uint256,
     bytes calldata extraData
   ) internal view override returns (uint256) {
     (uint256 startTime, uint256 exponent, uint256 amplificationFactor) =
