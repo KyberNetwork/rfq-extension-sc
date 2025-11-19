@@ -21,6 +21,15 @@ jobs:
           persist-credentials: false
           submodules: recursive
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install limit-order-protocol dependencies
+        working-directory: lib/limit-order-protocol
+        run: yarn install
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
