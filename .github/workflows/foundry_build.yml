@@ -1,6 +1,9 @@
 # Script name
 name: Run Foundry Build
-on: [pull_request]
+on:
+  pull_request:
+  push:
+
 
 # Task list
 jobs:

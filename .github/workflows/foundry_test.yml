@@ -3,7 +3,7 @@ name: Run Foundry tests
 # Prerequisites for execution: any actions with the pool-request
 on:
   pull_request:
-
+  push:
 
 jobs:
   foundry_test:

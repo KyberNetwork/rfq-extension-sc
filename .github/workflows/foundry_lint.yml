@@ -2,7 +2,9 @@
 name: Run Foundry lint
 
 # Prerequisites for execution: any actions with the pool-request
-on: [pull_request]
+on:
+  pull_request:
+  push:
 
 jobs:
   lint:
