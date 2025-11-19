@@ -22,7 +22,7 @@ jobs:
 
       - name: Install limit-order-protocol dependencies
         working-directory: lib/limit-order-protocol
-        run: yarn install
+        run: yarn 
 
       - name: Install Foundry
         uses: KyberNetwork/foundry-toolchain@master
