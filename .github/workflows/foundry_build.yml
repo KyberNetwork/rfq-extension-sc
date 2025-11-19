@@ -1,0 +1,41 @@
+# Script name
+name: Run Foundry Build
+on: [pull_request]
+
+# Task list
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+
+    # Task name
+    name: Run Foundry build
+
+    runs-on: self-hosted
+
+    # List of steps
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install limit-order-protocol dependencies
+        working-directory: lib/limit-order-protocol
+        run: yarn install
+
+      - name: Install Foundry
+        uses: KyberNetwork/foundry-toolchain@master
+        with:
+          version: v1.4.2
+
+      - name: Run Forge build
+        run: |
+          forge --version
+          forge build src --sizes
+        id: build

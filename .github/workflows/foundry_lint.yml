@@ -1,0 +1,24 @@
+# Script name
+name: Run Foundry lint
+
+# Prerequisites for execution: any actions with the pool-request
+on: [pull_request]
+
+jobs:
+  lint:
+    name: Kyber Dex Aggregator Lint
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Install Foundry
+        uses: KyberNetwork/foundry-toolchain@master
+        with:
+          version: v1.4.2
+
+      - name: Run lint
+        run: forge fmt --check
+        id: lint
