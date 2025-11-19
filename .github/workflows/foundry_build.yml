@@ -28,8 +28,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install limit-order-protocol dependencies
-        working-directory: lib/limit-order-protocol
+      - name: Run yarn 
         run: yarn 
 
       - name: Install Foundry

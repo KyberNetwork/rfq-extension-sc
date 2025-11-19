@@ -15,7 +15,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     uint256 expiration,
     uint256 startTime,
     uint256 endTime,
-    uint256 maxVarianceBps,
+    uint256 amplificationFactor,
     uint256 exponent
   ) public {
     takingAmount = bound(takingAmount, 1_000_000, 100_000 ether);
@@ -24,11 +24,11 @@ contract DecayCurveAmountGetterTest is BaseTest {
     startTime = bound(startTime, block.timestamp - 1000, expiration);
     endTime = bound(endTime, startTime, expiration);
     vm.assume(endTime > startTime);
-    maxVarianceBps = bound(maxVarianceBps, 1, 9000);
-    exponent = bound(exponent, 1, 10);
+    amplificationFactor = bound(amplificationFactor, 1, 9000);
+    exponent = bound(exponent, 0, 3e18);
     _flags = [_HAS_EXTENSION_FLAG];
 
-    bytes memory extraData = abi.encode(startTime, exponent, maxVarianceBps);
+    bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
     bytes memory extension = _buildExtension(extraData, '');
     IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
     (, bytes32 r, bytes32 vs) = _signOrder(order);
@@ -45,12 +45,53 @@ contract DecayCurveAmountGetterTest is BaseTest {
     assertEq(takerBalanceAfter, makingAmountFilled);
   }
 
+  function testFuzz_WeightedAmountGetter_MultipleFills(
+    uint256 takingAmount,
+    uint256 makingAmount,
+    uint256 expiration,
+    uint256 startTime,
+    uint256 endTime,
+    uint256 amplificationFactor,
+    uint256 exponent
+  ) public {
+    takingAmount = bound(takingAmount, 1_000_000, 100_000 ether);
+    makingAmount = bound(makingAmount, 1_000_000, 100_000 ether);
+    expiration = bound(expiration, block.timestamp, block.timestamp + 1 days);
+    startTime = bound(startTime, block.timestamp - 1000, expiration);
+    endTime = bound(endTime, startTime, expiration);
+    vm.assume(endTime > startTime);
+    amplificationFactor = bound(amplificationFactor, 1, 9000);
+    exponent = bound(exponent, 0, 3e18);
+    _flags = [_HAS_EXTENSION_FLAG, _ALLOW_MULTIPLE_FILLS_FLAG];
+
+    bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
+    bytes memory extension = _buildExtension(extraData, '');
+    IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
+    (, bytes32 r, bytes32 vs) = _signOrder(order);
+    TakerTraits takerTraits = _buildTakerTraits(extension.length);
+
+    uint256 requestedTakingAmount = bound(takingAmount, takingAmount / 5, takingAmount / 2);
+    vm.prank(_taker);
+    (uint256 makingAmountFilled, uint256 takingAmountFilled,) =
+      _limitOrder.fillOrderArgs(order, r, vs, requestedTakingAmount, takerTraits, extension);
+
+    uint256 makerBalanceAfter = _token1.balanceOf(_maker);
+    uint256 takerBalanceAfter = _token0.balanceOf(_taker);
+    assertEq(makerBalanceAfter, takingAmountFilled);
+    assertEq(takerBalanceAfter, makingAmountFilled);
+
+    vm.prank(_taker);
+    (uint256 makingAmountFilled2, uint256 takingAmountFilled2,) = _limitOrder.fillOrderArgs(
+      order, r, vs, takingAmount - requestedTakingAmount, takerTraits, extension
+    );
+  }
+
   function testFuzz_MakingAmount_NotChanged(
     uint256 takingAmount,
     uint256 makingAmount,
     uint256 expiration,
     uint256 endTime,
-    uint256 maxVarianceBps,
+    uint256 amplificationFactor,
     uint256 exponent
   ) public {
     takingAmount = bound(takingAmount, 1_000_000, 100_000 ether);
@@ -59,11 +100,11 @@ contract DecayCurveAmountGetterTest is BaseTest {
     uint256 startTime = block.timestamp;
     endTime = bound(endTime, startTime, expiration);
     vm.assume(endTime > startTime);
-    maxVarianceBps = bound(maxVarianceBps, 1, 9000);
-    exponent = bound(exponent, 1, 10);
+    amplificationFactor = bound(amplificationFactor, 1, 9000);
+    exponent = bound(exponent, 0, 3e18);
     _flags = [_HAS_EXTENSION_FLAG];
 
-    bytes memory extraData = abi.encode(startTime, exponent, maxVarianceBps);
+    bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
     bytes memory extension = _buildExtension(extraData, '');
     IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
     (, bytes32 r, bytes32 vs) = _signOrder(order);
@@ -84,18 +125,18 @@ contract DecayCurveAmountGetterTest is BaseTest {
     uint256 takingAmount,
     uint256 makingAmount,
     uint256 expiration,
-    uint256 maxVarianceBps
+    uint256 amplificationFactor
   ) public {
     takingAmount = bound(takingAmount, 1_000_000, 100_000 ether);
     makingAmount = bound(makingAmount, 1_000_000, 100_000 ether);
     expiration = bound(expiration, block.timestamp + 1 days, block.timestamp + 2 days);
     uint256 startTime = block.timestamp;
-    maxVarianceBps = bound(maxVarianceBps, 4000, 9000);
+    amplificationFactor = bound(amplificationFactor, 4000, 9000);
     uint256 exponent = 1;
     _flags = [_HAS_EXTENSION_FLAG];
     vm.warp((startTime + expiration) / 2);
 
-    bytes memory extraData = abi.encode(startTime, exponent, maxVarianceBps);
+    bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
     bytes memory extension = _buildExtension(extraData, '');
     IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
     (, bytes32 r, bytes32 vs) = _signOrder(order);
@@ -137,5 +178,30 @@ contract DecayCurveAmountGetterTest is BaseTest {
     );
     (uint256 makingAmountFilled, uint256 takingAmountFilled,) =
       _limitOrder.fillOrderArgs(order, r, vs, 10_000, takerTraits, extension);
+  }
+
+  function test_DecayCurveExactValue() public {
+    vm.warp(0);
+    uint256 takingAmount = 100;
+    uint256 makingAmount = 100;
+    uint256 expiration = 100;
+    uint256 startTime = 50;
+    uint256 amplificationFactor = 4000;
+    uint256 exponent = 1e18;
+    _flags = [_HAS_EXTENSION_FLAG];
+    vm.warp(80);
+
+    bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
+    bytes memory extension = _buildExtension(extraData, '');
+    IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
+    (, bytes32 r, bytes32 vs) = _signOrder(order);
+    TakerTraits takerTraits = _buildTakerTraits(extension.length);
+
+    vm.prank(_taker);
+    (uint256 makingAmountFilled, uint256 takingAmountFilled,) =
+      _limitOrder.fillOrderArgs(order, r, vs, takingAmount, takerTraits, extension);
+
+    assertEq(makingAmountFilled, 76);
+    assertEq(takingAmountFilled, 100);
   }
 }
