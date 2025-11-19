@@ -6,9 +6,9 @@ import {console} from 'forge-std/console.sol';
 import {IOrderMixin} from 'limit-order-protocol/contracts/interfaces/IOrderMixin.sol';
 import {BitInvalidatorLib} from 'limit-order-protocol/contracts/libraries/BitInvalidatorLib.sol';
 import {TakerTraits} from 'limit-order-protocol/contracts/libraries/TakerTraitsLib.sol';
-import {TimeWeightedAmountGetter} from 'src/1inch/TimeWeightedAmountGetter.sol';
+import {DecayCurveAmountGetter} from 'src/1inch/DecayCurveAmountGetter.sol';
 
-contract TimeWeightedAmountGetterTest is BaseTest {
+contract DecayCurveAmountGetterTest is BaseTest {
   function testFuzz_WeightedAmountGetter(
     uint256 takingAmount,
     uint256 makingAmount,
@@ -28,7 +28,7 @@ contract TimeWeightedAmountGetterTest is BaseTest {
     exponent = bound(exponent, 1, 10);
     _flags = [_HAS_EXTENSION_FLAG];
 
-    bytes memory extraData = abi.encode(startTime, endTime, exponent, maxVarianceBps);
+    bytes memory extraData = abi.encode(startTime, exponent, maxVarianceBps);
     bytes memory extension = _buildExtension(extraData, '');
     IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
     (, bytes32 r, bytes32 vs) = _signOrder(order);
@@ -63,7 +63,7 @@ contract TimeWeightedAmountGetterTest is BaseTest {
     exponent = bound(exponent, 1, 10);
     _flags = [_HAS_EXTENSION_FLAG];
 
-    bytes memory extraData = abi.encode(startTime, endTime, exponent, maxVarianceBps);
+    bytes memory extraData = abi.encode(startTime, exponent, maxVarianceBps);
     bytes memory extension = _buildExtension(extraData, '');
     IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
     (, bytes32 r, bytes32 vs) = _signOrder(order);
@@ -95,7 +95,7 @@ contract TimeWeightedAmountGetterTest is BaseTest {
     _flags = [_HAS_EXTENSION_FLAG];
     vm.warp((startTime + expiration) / 2);
 
-    bytes memory extraData = abi.encode(startTime, 0, exponent, maxVarianceBps);
+    bytes memory extraData = abi.encode(startTime, exponent, maxVarianceBps);
     bytes memory extension = _buildExtension(extraData, '');
     IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
     (, bytes32 r, bytes32 vs) = _signOrder(order);
@@ -133,7 +133,7 @@ contract TimeWeightedAmountGetterTest is BaseTest {
 
     vm.prank(_taker);
     vm.expectRevert(
-      abi.encodeWithSelector(TimeWeightedAmountGetter.TakingAmountNotSupported.selector)
+      abi.encodeWithSelector(DecayCurveAmountGetter.TakingAmountNotSupported.selector)
     );
     (uint256 makingAmountFilled, uint256 takingAmountFilled,) =
       _limitOrder.fillOrderArgs(order, r, vs, 10_000, takerTraits, extension);

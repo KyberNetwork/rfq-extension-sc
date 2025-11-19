@@ -10,7 +10,7 @@ import {MakerTraits} from 'limit-order-protocol/contracts/libraries/MakerTraitsL
 import {TakerTraits} from 'limit-order-protocol/contracts/libraries/TakerTraitsLib.sol';
 import {WrappedTokenMock} from 'limit-order-protocol/contracts/mocks/WrappedTokenMock.sol';
 import {ERC20Mock} from 'openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol';
-import {TimeWeightedAmountGetter} from 'src/1inch/TimeWeightedAmountGetter.sol';
+import {DecayCurveAmountGetter} from 'src/1inch/DecayCurveAmountGetter.sol';
 import {ExtensionBuilder} from 'test/utils/ExtensionBuilder.sol';
 
 abstract contract BaseTest is Test {
@@ -37,7 +37,7 @@ abstract contract BaseTest is Test {
   uint256 internal constant _TAKER_PRIVATE_KEY = 0xB0B;
 
   LimitOrderProtocol internal _limitOrder;
-  TimeWeightedAmountGetter internal _amountGetter;
+  DecayCurveAmountGetter internal _amountGetter;
   WrappedTokenMock internal _weth;
   ERC20Mock internal _token0;
   ERC20Mock internal _token1;
@@ -53,7 +53,7 @@ abstract contract BaseTest is Test {
 
     _weth = new WrappedTokenMock('Wrapped Ether', 'WETH');
     _limitOrder = new LimitOrderProtocol(IWETH(address(_weth)));
-    _amountGetter = new TimeWeightedAmountGetter();
+    _amountGetter = new DecayCurveAmountGetter();
     _token0 = new ERC20Mock();
     _token1 = new ERC20Mock();
     vm.label(_maker, 'Maker');
