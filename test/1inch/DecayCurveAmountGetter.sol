@@ -29,7 +29,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     _flags = [_HAS_EXTENSION_FLAG];
 
     bytes memory extraData = abi.encode(startTime, exponent, maxVarianceBps);
-    bytes memory extension = _buildExtension(extraData, '');
+    bytes memory extension = _buildExtension(extraData, '', '');
     IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
     (, bytes32 r, bytes32 vs) = _signOrder(order);
     TakerTraits takerTraits = _buildTakerTraits(extension.length);
@@ -64,7 +64,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     _flags = [_HAS_EXTENSION_FLAG];
 
     bytes memory extraData = abi.encode(startTime, exponent, maxVarianceBps);
-    bytes memory extension = _buildExtension(extraData, '');
+    bytes memory extension = _buildExtension(extraData, '', '');
     IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
     (, bytes32 r, bytes32 vs) = _signOrder(order);
     TakerTraits takerTraits = _buildTakerTraits(extension.length);
@@ -96,7 +96,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     vm.warp((startTime + expiration) / 2);
 
     bytes memory extraData = abi.encode(startTime, exponent, maxVarianceBps);
-    bytes memory extension = _buildExtension(extraData, '');
+    bytes memory extension = _buildExtension(extraData, '', '');
     IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
     (, bytes32 r, bytes32 vs) = _signOrder(order);
     TakerTraits takerTraits = _buildTakerTraits(extension.length);
@@ -120,7 +120,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
   function testRevert_TakingAmount_NotSupported() public {
     _flags = [_HAS_EXTENSION_FLAG];
     bytes memory extraData = abi.encode(0, 0, 0, 0);
-    bytes memory extension = _buildExtension('', extraData);
+    bytes memory extension = _buildExtension('', extraData, '');
 
     IOrderMixin.Order memory order =
       _buildOrder(extension, 10_000, 10_000, block.timestamp + 1 days);
