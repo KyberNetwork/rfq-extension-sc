@@ -22,11 +22,9 @@ contract DecayCurveAmountGetter is AmountGetterBase {
   using CalldataDecoder for bytes;
 
   error TakingAmountNotSupported();
-  error ExponentTooHigh();
   error AmplificationFactorTooHigh();
   error TooMuchMakingAmount();
 
-  uint256 public constant MAX_EXPONENT = 4e18;
   uint256 public constant PRECISION = 1e18;
 
   /**
@@ -58,7 +56,6 @@ contract DecayCurveAmountGetter is AmountGetterBase {
 
     // Only apply decay if exponent > 0 and current time is past the start time
     if (exponent > 0 && block.timestamp > startTime) {
-      require(exponent <= MAX_EXPONENT, ExponentTooHigh());
       require(amplificationFactor <= PRECISION, AmplificationFactorTooHigh());
       // Step 1: Calculate normalized time progress (0 to 1, scaled by 1e18 for precision)
       // Formula: confidence = (elapsed_time / total_time_window) * 1e18
