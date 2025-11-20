@@ -100,7 +100,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     uint256 startTime = block.timestamp;
     endTime = bound(endTime, startTime, expiration);
     vm.assume(endTime > startTime);
-    amplificationFactor = bound(amplificationFactor, 1, 9000);
+    amplificationFactor = bound(amplificationFactor, 1, 1e18);
     exponent = bound(exponent, 0, 3e18);
     _flags = [_HAS_EXTENSION_FLAG];
 
@@ -131,7 +131,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     makingAmount = bound(makingAmount, 1_000_000, 100_000 ether);
     expiration = bound(expiration, block.timestamp + 1 days, block.timestamp + 2 days);
     uint256 startTime = block.timestamp;
-    amplificationFactor = bound(amplificationFactor, 4000, 9000);
+    amplificationFactor = bound(amplificationFactor, 0.4e18, 0.9e18);
     uint256 exponent = 1;
     _flags = [_HAS_EXTENSION_FLAG];
     vm.warp((startTime + expiration) / 2);
@@ -183,13 +183,13 @@ contract DecayCurveAmountGetterTest is BaseTest {
   function test_DecayCurveExactValue() public {
     vm.warp(0);
     uint256 takingAmount = 100;
-    uint256 makingAmount = 100;
-    uint256 expiration = 100;
-    uint256 startTime = 50;
-    uint256 amplificationFactor = 4000;
+    uint256 makingAmount = 1000;
+    uint256 expiration = 1000;
+    uint256 startTime = 400;
+    uint256 amplificationFactor = 0.4e18;
     uint256 exponent = 1e18;
     _flags = [_HAS_EXTENSION_FLAG];
-    vm.warp(80);
+    vm.warp(800);
 
     bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
     bytes memory extension = _buildExtension(extraData, '');
@@ -201,7 +201,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     (uint256 makingAmountFilled, uint256 takingAmountFilled,) =
       _limitOrder.fillOrderArgs(order, r, vs, takingAmount, takerTraits, extension);
 
-    assertEq(makingAmountFilled, 76);
+    assertEq(makingAmountFilled, 734);
     assertEq(takingAmountFilled, 100);
   }
 }
