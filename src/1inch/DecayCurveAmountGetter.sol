@@ -24,6 +24,7 @@ contract DecayCurveAmountGetter is AmountGetterBase {
   error TakingAmountNotSupported();
   error ExponentTooHigh();
   error AmplificationFactorTooHigh();
+  error TooMuchMakingAmount();
 
   uint256 public constant MAX_EXPONENT = 4e18;
   uint256 public constant PRECISION = 1e18;
@@ -46,7 +47,7 @@ contract DecayCurveAmountGetter is AmountGetterBase {
     address,
     /* taker */
     uint256 requestedTakingAmount,
-    uint256,
+    uint256 remainingMakingAmount,
     bytes calldata extraData
   ) internal view override returns (uint256) {
     (uint256 startTime, uint256 exponent, uint256 amplificationFactor) =
@@ -77,6 +78,7 @@ contract DecayCurveAmountGetter is AmountGetterBase {
         (makingAmount * (MAX_AMPLIFICATION_FACTOR - Math.min(reductionBps, amplificationFactor)))
           / MAX_AMPLIFICATION_FACTOR;
     }
+    require(makingAmount <= remainingMakingAmount, TooMuchMakingAmount());
     return makingAmount;
   }
 
