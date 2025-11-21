@@ -7,23 +7,36 @@ import {
   IOrderMixin
 } from 'limit-order-protocol/contracts/extensions/AmountGetterBase.sol';
 import {
+  AmountCalculatorLib
+} from 'limit-order-protocol/contracts/libraries/AmountCalculatorLib.sol';
+import {
   MakerTraits,
   MakerTraitsLib
 } from 'limit-order-protocol/contracts/libraries/MakerTraitsLib.sol';
 import {Math} from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
+import {FixedPointMathLib} from 'solady/src/utils/FixedPointMathLib.sol';
 
 contract DecayCurveAmountGetter is AmountGetterBase {
   using MakerTraitsLib for MakerTraits;
+  using FixedPointMathLib for int256;
   using CalldataDecoder for bytes;
+
   error TakingAmountNotSupported();
+  error ExponentTooHigh();
+  error AmplificationFactorTooHigh();
+  error TooMuchMakingAmount();
+
+  uint256 public constant MAX_EXPONENT = 4e18;
+  uint256 public constant PRECISION = 1e18;
+  uint256 public constant MAX_AMPLIFICATION_FACTOR = 10_000;
 
   /**
    * @notice Calculates the adjusted making amount based on time-weighted decay curve
-   * @dev Implements a decay formula: R_new = R_0 * (1 - (c^E) * M / 10^4)
-   *      where c = normalized time progress (0-1), E = exponent, M = maxReductionBps
+   * @dev Implements a decay formula: R_new = R_0 * (1 - (c^E) * A / 10^4)
+   *      where c = normalized time progress (0-1), E = exponent, A = Amplification factor
    * @dev The formula reduces maker amount as time progresses, creating a curve where:
    *      - Higher exponents create more aggressive decay near expiration
-   *      - Reduction is capped at maxReductionBps basis points
+   *      - Reduction is capped at Amplification factor basis points
    */
   function _getMakingAmount(
     IOrderMixin.Order calldata order,
@@ -33,36 +46,40 @@ contract DecayCurveAmountGetter is AmountGetterBase {
     /* orderHash */
     address,
     /* taker */
-    uint256,
-    /* takingAmount */
+    uint256 requestedTakingAmount,
     uint256 remainingMakingAmount,
     bytes calldata extraData
   ) internal view override returns (uint256) {
-    (uint256 startTime, uint256 exponent, uint256 maxReductionBps) =
+    (uint256 startTime, uint256 exponent, uint256 amplificationFactor) =
       (extraData.decodeUint256(0), extraData.decodeUint256(1), extraData.decodeUint256(2));
-    uint256 expirationTime = order.makerTraits.getExpirationTime();
+
+    uint256 makingAmount = AmountCalculatorLib.getMakingAmount(
+      order.makingAmount, order.takingAmount, requestedTakingAmount
+    );
 
     // Only apply decay if exponent > 0 and current time is past the start time
     if (exponent > 0 && block.timestamp > startTime) {
-      // Step 1: Calculate normalized time progress (0 to 1, scaled by 1e6 for precision)
-      // Formula: confidence = (elapsed_time / total_time_window) * 1e6
-      uint256 confidence = ((Math.min(block.timestamp, expirationTime) - startTime) * 1e6)
-        / (expirationTime - startTime);
-
+      require(exponent <= MAX_EXPONENT, ExponentTooHigh());
+      require(amplificationFactor <= MAX_AMPLIFICATION_FACTOR, AmplificationFactorTooHigh());
+      // Step 1: Calculate normalized time progress (0 to 1, scaled by 1e18 for precision)
+      // Formula: confidence = (elapsed_time / total_time_window) * 1e18
+      uint256 confidence = (block.timestamp - startTime) * PRECISION
+        / (order.makerTraits.getExpirationTime() - startTime);
       // Step 2: Apply exponent to create non-linear curve
-      // exponentiatedProgress = confidence^exponent (still scaled by 1e6)
-      uint256 exponentiatedProgress = confidence ** exponent;
-      uint256 normalizationFactor = 1e6 ** exponent;
+      // exponentiatedProgress = confidence^exponent (still scaled by 1e18)
+      int256 exponentiatedProgress = int256(confidence).powWad(int256(exponent));
+      int256 normalizationFactor = int256(PRECISION).powWad(int256(exponent));
 
       // Step 3: Calculate reduction percentage in basis points
-      uint256 reductionBps = (exponentiatedProgress * maxReductionBps) / normalizationFactor;
-
+      uint256 reductionBps =
+        (uint256(exponentiatedProgress) * amplificationFactor) / uint256(normalizationFactor);
       // Step 4: Apply the reduction to remaining making amount
-      remainingMakingAmount =
-        (remainingMakingAmount * (10_000 - Math.min(reductionBps, maxReductionBps))) / 10_000;
+      makingAmount =
+        (makingAmount * (MAX_AMPLIFICATION_FACTOR - Math.min(reductionBps, amplificationFactor)))
+          / MAX_AMPLIFICATION_FACTOR;
     }
-
-    return remainingMakingAmount;
+    require(makingAmount <= remainingMakingAmount, TooMuchMakingAmount());
+    return makingAmount;
   }
 
   function _getTakingAmount(

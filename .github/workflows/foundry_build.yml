@@ -28,9 +28,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install limit-order-protocol dependencies
-        working-directory: lib/limit-order-protocol
-        run: yarn 
+      - name: Install Yarn
+        run: npm install --global yarn
+
+      - name: Run yarn
+        run: yarn install --frozen-lockfile
 
       - name: Install Foundry
         uses: KyberNetwork/foundry-toolchain@master

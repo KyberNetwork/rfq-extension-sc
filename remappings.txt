@@ -1,5 +1,6 @@
 forge-std/=lib/ks-common-sc/lib/forge-std/src/
 ks-common-sc/=lib/ks-common-sc/
 openzeppelin-contracts/=lib/ks-common-sc/lib/openzeppelin-contracts/
-limit-order-protocol=lib/limit-order-protocol
-1inch/=lib/limit-order-protocol/node_modules/@1inch
+limit-order-protocol=node_modules/@1inch/limit-order-protocol-contract
+@1inch=node_modules/@1inch
+solady=lib/solady

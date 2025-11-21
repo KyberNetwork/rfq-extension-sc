@@ -1,0 +1,16 @@
+{
+  "name": "rfq-extension-sc",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/KyberNetwork/rfq-extension-sc.git",
+  "author": "minhtr09 <22521523@gm.uit.edu.vn>",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-foundry": "^1.2.0",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "hardhat": "^2.27.0"
+  },
+  "dependencies": {
+    "@1inch/limit-order-protocol-contract": "^4.3.3"
+  }
+}
