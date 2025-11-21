@@ -65,7 +65,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     _flags = [_HAS_EXTENSION_FLAG, _ALLOW_MULTIPLE_FILLS_FLAG];
 
     bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
-    bytes memory extension = _buildExtension(extraData, '');
+    bytes memory extension = _buildExtension(extraData, '', '');
     IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
     (, bytes32 r, bytes32 vs) = _signOrder(order);
     TakerTraits takerTraits = _buildTakerTraits(extension.length);
@@ -192,7 +192,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     vm.warp(80);
 
     bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
-    bytes memory extension = _buildExtension(extraData, '');
+    bytes memory extension = _buildExtension(extraData, '', '');
     IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
     (, bytes32 r, bytes32 vs) = _signOrder(order);
     TakerTraits takerTraits = _buildTakerTraits(extension.length);

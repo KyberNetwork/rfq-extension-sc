@@ -1,19 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {IOrderMixin} from 'limit-order-protocol/contracts/extensions/AmountGetterBase.sol';
+import {IOrderMixin} from 'limit-order-protocol/contracts/interfaces/IOrderMixin.sol';
 import {IPostInteraction} from 'limit-order-protocol/contracts/interfaces/IPostInteraction.sol';
 
 import {ManagementBase} from 'ks-common-sc/src/base/ManagementBase.sol';
 import {ManagementPausable} from 'ks-common-sc/src/base/ManagementPausable.sol';
 import {ManagementRescuable} from 'ks-common-sc/src/base/ManagementRescuable.sol';
 
+import {Address, AddressLib} from '@1inch/solidity-utils/contracts/libraries/AddressLib.sol';
 import {IWETH} from 'ks-common-sc/src/interfaces/IWETH.sol';
 import {CustomRevert} from 'ks-common-sc/src/libraries/CustomRevert.sol';
 import {KSRoles} from 'ks-common-sc/src/libraries/KSRoles.sol';
 import {TokenHelper} from 'ks-common-sc/src/libraries/token/TokenHelper.sol';
-
-import {Address, AddressLib} from '1inch/solidity-utils/contracts/libraries/AddressLib.sol';
 
 import {CommonLibrary} from './libraries/CommonLibrary.sol';
 
