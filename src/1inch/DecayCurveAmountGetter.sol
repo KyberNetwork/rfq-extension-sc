@@ -13,7 +13,6 @@ import {
   MakerTraits,
   MakerTraitsLib
 } from 'limit-order-protocol/contracts/libraries/MakerTraitsLib.sol';
-import {Math} from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 import {FixedPointMathLib} from 'solady/src/utils/FixedPointMathLib.sol';
 
 contract DecayCurveAmountGetter is AmountGetterBase {
@@ -65,7 +64,7 @@ contract DecayCurveAmountGetter is AmountGetterBase {
       // Step 2: Calculate reduction amount
       // Formula: R0 * (c^E) * A / 1e36
       uint256 reductionAmount = makingAmount * amplificationFactor
-        * uint256(int256(confidence).powWad(int256(exponent))) / 1e36;
+        * uint256(int256(confidence).powWad(int256(exponent))) / (PRECISION ** 2);
 
       makingAmount -= reductionAmount;
     }
