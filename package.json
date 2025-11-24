@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "repository": "https://github.com/KyberNetwork/rfq-extension-sc.git",
-  "author": "minhtr09 <22521523@gm.uit.edu.vn>",
+  "author": "minhtr09 <tri.nguyen@kyber.network>",
   "license": "MIT",
   "devDependencies": {
     "@nomicfoundation/hardhat-foundry": "^1.2.0",
