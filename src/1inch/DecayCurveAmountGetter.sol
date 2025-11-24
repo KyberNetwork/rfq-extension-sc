@@ -22,17 +22,14 @@ contract DecayCurveAmountGetter is AmountGetterBase {
   using CalldataDecoder for bytes;
 
   error TakingAmountNotSupported();
-  error ExponentTooHigh();
   error AmplificationFactorTooHigh();
   error TooMuchMakingAmount();
 
-  uint256 public constant MAX_EXPONENT = 4e18;
   uint256 public constant PRECISION = 1e18;
-  uint256 public constant MAX_AMPLIFICATION_FACTOR = 10_000;
 
   /**
    * @notice Calculates the adjusted making amount based on time-weighted decay curve
-   * @dev Implements a decay formula: R_new = R_0 * (1 - (c^E) * A / 10^4)
+   * @dev Implements a decay formula: R_new = R_0 - R_0 * (c^E) * A / 1e36
    *      where c = normalized time progress (0-1), E = exponent, A = Amplification factor
    * @dev The formula reduces maker amount as time progresses, creating a curve where:
    *      - Higher exponents create more aggressive decay near expiration
@@ -59,24 +56,18 @@ contract DecayCurveAmountGetter is AmountGetterBase {
 
     // Only apply decay if exponent > 0 and current time is past the start time
     if (exponent > 0 && block.timestamp > startTime) {
-      require(exponent <= MAX_EXPONENT, ExponentTooHigh());
-      require(amplificationFactor <= MAX_AMPLIFICATION_FACTOR, AmplificationFactorTooHigh());
+      require(amplificationFactor <= PRECISION, AmplificationFactorTooHigh());
       // Step 1: Calculate normalized time progress (0 to 1, scaled by 1e18 for precision)
       // Formula: confidence = (elapsed_time / total_time_window) * 1e18
       uint256 confidence = (block.timestamp - startTime) * PRECISION
         / (order.makerTraits.getExpirationTime() - startTime);
-      // Step 2: Apply exponent to create non-linear curve
-      // exponentiatedProgress = confidence^exponent (still scaled by 1e18)
-      int256 exponentiatedProgress = int256(confidence).powWad(int256(exponent));
-      int256 normalizationFactor = int256(PRECISION).powWad(int256(exponent));
 
-      // Step 3: Calculate reduction percentage in basis points
-      uint256 reductionBps =
-        (uint256(exponentiatedProgress) * amplificationFactor) / uint256(normalizationFactor);
-      // Step 4: Apply the reduction to remaining making amount
-      makingAmount =
-        (makingAmount * (MAX_AMPLIFICATION_FACTOR - Math.min(reductionBps, amplificationFactor)))
-          / MAX_AMPLIFICATION_FACTOR;
+      // Step 2: Calculate reduction amount
+      // Formula: R0 * (c^E) * A / 1e36
+      uint256 reductionAmount = makingAmount * amplificationFactor
+        * uint256(int256(confidence).powWad(int256(exponent))) / 1e36;
+
+      makingAmount -= reductionAmount;
     }
     require(makingAmount <= remainingMakingAmount, TooMuchMakingAmount());
     return makingAmount;

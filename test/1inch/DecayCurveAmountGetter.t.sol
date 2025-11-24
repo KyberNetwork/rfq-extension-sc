@@ -5,10 +5,16 @@ import {BaseTest} from './Base.t.sol';
 import {console} from 'forge-std/console.sol';
 import {IOrderMixin} from 'limit-order-protocol/contracts/interfaces/IOrderMixin.sol';
 import {BitInvalidatorLib} from 'limit-order-protocol/contracts/libraries/BitInvalidatorLib.sol';
+import {
+  MakerTraits,
+  MakerTraitsLib
+} from 'limit-order-protocol/contracts/libraries/MakerTraitsLib.sol';
 import {TakerTraits} from 'limit-order-protocol/contracts/libraries/TakerTraitsLib.sol';
 import {DecayCurveAmountGetter} from 'src/1inch/DecayCurveAmountGetter.sol';
 
 contract DecayCurveAmountGetterTest is BaseTest {
+  using MakerTraitsLib for MakerTraits;
+
   function testFuzz_WeightedAmountGetter(
     uint256 takingAmount,
     uint256 makingAmount,
@@ -100,7 +106,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     uint256 startTime = block.timestamp;
     endTime = bound(endTime, startTime, expiration);
     vm.assume(endTime > startTime);
-    amplificationFactor = bound(amplificationFactor, 1, 9000);
+    amplificationFactor = bound(amplificationFactor, 1, 1e18);
     exponent = bound(exponent, 0, 3e18);
     _flags = [_HAS_EXTENSION_FLAG];
 
@@ -131,7 +137,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     makingAmount = bound(makingAmount, 1_000_000, 100_000 ether);
     expiration = bound(expiration, block.timestamp + 1 days, block.timestamp + 2 days);
     uint256 startTime = block.timestamp;
-    amplificationFactor = bound(amplificationFactor, 4000, 9000);
+    amplificationFactor = bound(amplificationFactor, 0.4e18, 0.9e18);
     uint256 exponent = 1;
     _flags = [_HAS_EXTENSION_FLAG];
     vm.warp((startTime + expiration) / 2);
@@ -183,13 +189,13 @@ contract DecayCurveAmountGetterTest is BaseTest {
   function test_DecayCurveExactValue() public {
     vm.warp(0);
     uint256 takingAmount = 100;
-    uint256 makingAmount = 100;
-    uint256 expiration = 100;
-    uint256 startTime = 50;
-    uint256 amplificationFactor = 4000;
+    uint256 makingAmount = 1000;
+    uint256 expiration = 1000;
+    uint256 startTime = 400;
+    uint256 amplificationFactor = 0.4e18;
     uint256 exponent = 1e18;
     _flags = [_HAS_EXTENSION_FLAG];
-    vm.warp(80);
+    vm.warp(800);
 
     bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
     bytes memory extension = _buildExtension(extraData, '');
@@ -201,7 +207,43 @@ contract DecayCurveAmountGetterTest is BaseTest {
     (uint256 makingAmountFilled, uint256 takingAmountFilled,) =
       _limitOrder.fillOrderArgs(order, r, vs, takingAmount, takerTraits, extension);
 
-    assertEq(makingAmountFilled, 76);
+    assertEq(makingAmountFilled, 734);
     assertEq(takingAmountFilled, 100);
+  }
+
+  function test_DecayCurve_ExponentIntValue(
+    uint256 exponent,
+    uint256 takingAmount,
+    uint256 makingAmount,
+    uint256 expiration,
+    uint256 amplificationFactor
+  ) public {
+    vm.warp(0);
+    takingAmount = bound(takingAmount, 100, 100_000);
+    makingAmount = bound(makingAmount, 1e6, 1000 ether);
+    expiration = bound(expiration, 50, 100);
+    amplificationFactor = bound(amplificationFactor, 0.1e6, 0.5e6);
+    uint256 startTime = block.timestamp;
+    exponent = bound(exponent, 1, 4);
+    _flags = [_HAS_EXTENSION_FLAG];
+    vm.warp(bound(amplificationFactor, startTime, expiration));
+
+    bytes memory extraData = abi.encode(startTime, exponent * 1e18, amplificationFactor * 1e12);
+    bytes memory extension = _buildExtension(extraData, '');
+    IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
+    (, bytes32 r, bytes32 vs) = _signOrder(order);
+    TakerTraits takerTraits = _buildTakerTraits(extension.length);
+
+    vm.prank(_taker);
+    (uint256 makingAmountFilled, uint256 takingAmountFilled,) =
+      _limitOrder.fillOrderArgs(order, r, vs, takingAmount, takerTraits, extension);
+
+    uint256 confidence =
+      (block.timestamp - startTime) * 1e6 / (order.makerTraits.getExpirationTime() - startTime);
+
+    uint256 reductionPercent = amplificationFactor * (confidence ** exponent) / (1e6 ** exponent);
+    uint256 reductionAmount = makingAmount * reductionPercent / 1e6;
+
+    assertApproxEqRel(makingAmountFilled, makingAmount - reductionAmount, 1e13); // 0.001%;
   }
 }

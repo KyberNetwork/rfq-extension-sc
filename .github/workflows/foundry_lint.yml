@@ -2,13 +2,11 @@
 name: Run Foundry lint
 
 # Prerequisites for execution: any actions with the pool-request
-on:
-  pull_request:
-  push:
+on: [pull_request]
 
 jobs:
   lint:
-    name: Kyber Dex Aggregator Lint
+    name: Run Foundry lint
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
