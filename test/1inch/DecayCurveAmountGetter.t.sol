@@ -215,6 +215,29 @@ contract DecayCurveAmountGetterTest is BaseTest {
     assertEq(takingAmountFilled, 100);
   }
 
+  function testRevert_ExponentTooHigh() public {
+    vm.warp(0);
+    uint256 takingAmount = 100;
+    uint256 makingAmount = 1000;
+    uint256 expiration = 1000;
+    uint256 startTime = 400;
+    uint256 amplificationFactor = 0.4e18;
+    uint256 exponent = 5e18;
+    _flags = [_HAS_EXTENSION_FLAG];
+    vm.warp(800);
+
+    bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
+    bytes memory extension = _buildExtension(extraData, '');
+    IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
+    (, bytes32 r, bytes32 vs) = _signOrder(order);
+    TakerTraits takerTraits = _buildTakerTraits(extension.length);
+
+    vm.prank(_taker);
+    vm.expectRevert(abi.encodeWithSelector(DecayCurveAmountGetter.ExponentTooHigh.selector));
+    (uint256 makingAmountFilled, uint256 takingAmountFilled,) =
+      _limitOrder.fillOrderArgs(order, r, vs, takingAmount, takerTraits, extension);
+  }
+
   function test_DecayCurve_ExponentIntValue(
     uint256 exponent,
     uint256 takingAmount,

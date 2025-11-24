@@ -23,8 +23,10 @@ contract DecayCurveAmountGetter is AmountGetterBase {
   error TakingAmountNotSupported();
   error AmplificationFactorTooHigh();
   error TooMuchMakingAmount();
+  error ExponentTooHigh();
 
-  uint256 public constant PRECISION = 1e18;
+  uint256 public constant WAD = 1e18;
+  uint256 public constant MAX_EXPONENT = 4e18;
 
   /**
    * @notice Calculates the adjusted making amount based on time-weighted decay curve
@@ -55,17 +57,29 @@ contract DecayCurveAmountGetter is AmountGetterBase {
 
     // Only apply decay if exponent > 0 and current time is past the start time
     if (exponent > 0 && block.timestamp > startTime) {
-      require(amplificationFactor <= PRECISION, AmplificationFactorTooHigh());
+      require(amplificationFactor <= WAD, AmplificationFactorTooHigh());
+      require(exponent <= MAX_EXPONENT, ExponentTooHigh());
       // Step 1: Calculate normalized time progress (0 to 1, scaled by 1e18 for precision)
       // Formula: confidence = (elapsed_time / total_time_window) * 1e18
-      uint256 confidence = (block.timestamp - startTime) * PRECISION
-        / (order.makerTraits.getExpirationTime() - startTime);
-
-      // Step 2: Calculate reduction amount
-      // Formula: R0 * (c^E) * A / 1e36
-      uint256 reductionAmount = makingAmount * amplificationFactor
-        * uint256(int256(confidence).powWad(int256(exponent))) / (PRECISION ** 2);
-
+      uint256 confidence =
+        ((block.timestamp - startTime) * WAD) / (order.makerTraits.getExpirationTime() - startTime);
+      uint256 reductionAmount;
+      // gas savings for exponent is a multiple of 1e18
+      if (exponent % WAD == 0) {
+        reductionAmount = (makingAmount * amplificationFactor) / WAD;
+        exponent /= WAD;
+        for (uint256 i = 0; i < exponent; i++) {
+          reductionAmount = (reductionAmount * confidence) / WAD;
+        }
+      } else {
+        // Step 2: Calculate reduction amount
+        // Formula: R0 * (c^E) * A / 1e36
+        // Both amplificationFactor and powWad output are WAD, so divide by WAD^2 to rescale
+        reductionAmount =
+          (makingAmount
+              * amplificationFactor
+              * uint256(int256(confidence).powWad(int256(exponent)))) / (WAD ** 2);
+      }
       makingAmount -= reductionAmount;
     }
     require(makingAmount <= remainingMakingAmount, TooMuchMakingAmount());
