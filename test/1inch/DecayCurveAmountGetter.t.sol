@@ -15,23 +15,31 @@ import {DecayCurveAmountGetter} from 'src/1inch/DecayCurveAmountGetter.sol';
 contract DecayCurveAmountGetterTest is BaseTest {
   using MakerTraitsLib for MakerTraits;
 
+  /* Test corresponds to the Desmos curve visualization: https://www.desmos.com/calculator/klbg4dubcu */
   function testFuzz_WeightedAmountGetter(
     uint256 takingAmount,
-    uint256 makingAmount,
-    uint256 expiration,
-    uint256 startTime,
-    uint256 endTime,
-    uint256 amplificationFactor,
-    uint256 exponent
+    uint256 makingAmount, /* R0 */
+    uint256 expiration, /* D */
+    uint256 startTime, /* T */
+    uint256 blockTimestamp, /* t */
+    uint256 amplificationFactor, /* A */
+    uint256 exponent /* E */
   ) public {
-    takingAmount = bound(takingAmount, 1_000_000, 100_000 ether);
-    makingAmount = bound(makingAmount, 1_000_000, 100_000 ether);
-    expiration = bound(expiration, block.timestamp, block.timestamp + 1 days);
-    startTime = bound(startTime, block.timestamp - 1000, expiration);
-    endTime = bound(endTime, startTime, expiration);
-    vm.assume(endTime > startTime);
-    amplificationFactor = bound(amplificationFactor, 1, 9000);
-    exponent = bound(exponent, 0, 3e18);
+    vm.warp(0);
+    takingAmount = bound(takingAmount, 1 ether, 100 ether);
+    makingAmount = bound(makingAmount, 1 ether, 100 ether);
+    expiration = bound(expiration, 100, 200);
+    startTime = bound(startTime, 0, expiration / 2);
+    blockTimestamp = bound(blockTimestamp, startTime, expiration - 1);
+    amplificationFactor = bound(amplificationFactor, 1, 1e18);
+    exponent = bound(exponent, 0.01e18, 4e18);
+    vm.warp(blockTimestamp);
+    console.log('R0 =', makingAmount);
+    console.log('D =', expiration);
+    console.log('T =', startTime);
+    console.log('t =', blockTimestamp);
+    console.log('A =', amplificationFactor);
+    console.log('E =', exponent);
     _flags = [_HAS_EXTENSION_FLAG];
 
     bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
@@ -60,14 +68,13 @@ contract DecayCurveAmountGetterTest is BaseTest {
     uint256 amplificationFactor,
     uint256 exponent
   ) public {
+    vm.warp(0);
     takingAmount = bound(takingAmount, 1_000_000, 100_000 ether);
     makingAmount = bound(makingAmount, 1_000_000, 100_000 ether);
     expiration = bound(expiration, block.timestamp, block.timestamp + 1 days);
-    startTime = bound(startTime, block.timestamp - 1000, expiration);
-    endTime = bound(endTime, startTime, expiration);
-    vm.assume(endTime > startTime);
-    amplificationFactor = bound(amplificationFactor, 1, 9000);
-    exponent = bound(exponent, 0, 3e18);
+    startTime = bound(startTime, block.timestamp, expiration / 2);
+    amplificationFactor = bound(amplificationFactor, 1, 1e18);
+    exponent = bound(exponent, 0.5e18, 3e18);
     _flags = [_HAS_EXTENSION_FLAG, _ALLOW_MULTIPLE_FILLS_FLAG];
 
     bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
@@ -96,7 +103,6 @@ contract DecayCurveAmountGetterTest is BaseTest {
     uint256 takingAmount,
     uint256 makingAmount,
     uint256 expiration,
-    uint256 endTime,
     uint256 amplificationFactor,
     uint256 exponent
   ) public {
@@ -104,8 +110,6 @@ contract DecayCurveAmountGetterTest is BaseTest {
     makingAmount = bound(makingAmount, 1_000_000, 100_000 ether);
     expiration = bound(expiration, block.timestamp, block.timestamp + 1 days);
     uint256 startTime = block.timestamp;
-    endTime = bound(endTime, startTime, expiration);
-    vm.assume(endTime > startTime);
     amplificationFactor = bound(amplificationFactor, 1, 1e18);
     exponent = bound(exponent, 0, 3e18);
     _flags = [_HAS_EXTENSION_FLAG];
