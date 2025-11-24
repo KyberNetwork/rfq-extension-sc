@@ -11,6 +11,7 @@ import {TakerTraits} from 'limit-order-protocol/contracts/libraries/TakerTraitsL
 import {WrappedTokenMock} from 'limit-order-protocol/contracts/mocks/WrappedTokenMock.sol';
 import {ERC20Mock} from 'openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol';
 import {DecayCurveAmountGetter} from 'src/1inch/DecayCurveAmountGetter.sol';
+import {FeeTaker} from 'src/1inch/FeeTaker.sol';
 import {ExtensionBuilder} from 'test/utils/ExtensionBuilder.sol';
 
 abstract contract BaseTest is Test {
@@ -36,8 +37,11 @@ abstract contract BaseTest is Test {
   uint256 internal constant _MAKER_PRIVATE_KEY = 0xA11CE;
   uint256 internal constant _TAKER_PRIVATE_KEY = 0xB0B;
 
+  uint256 internal constant BPS = 10_000;
+
   LimitOrderProtocol internal _limitOrder;
   DecayCurveAmountGetter internal _amountGetter;
+  FeeTaker internal _feeTaker;
   WrappedTokenMock internal _weth;
   ERC20Mock internal _token0;
   ERC20Mock internal _token1;
@@ -45,15 +49,31 @@ abstract contract BaseTest is Test {
 
   address internal _maker;
   address internal _taker;
+
+  address internal _deployer;
+  address internal _alice;
+  address internal _bob;
+  address internal _charlie;
+  address internal _david;
+  address internal _eve;
+
   uint256 internal _baseTimestamp = 1_000_000;
 
   function setUp() public virtual {
     _maker = vm.addr(_MAKER_PRIVATE_KEY);
     _taker = vm.addr(_TAKER_PRIVATE_KEY);
 
+    _deployer = makeAddr('deployer');
+    _alice = makeAddr('alice');
+    _bob = makeAddr('bob');
+    _charlie = makeAddr('charlie');
+    _david = makeAddr('david');
+    _eve = makeAddr('eve');
+
     _weth = new WrappedTokenMock('Wrapped Ether', 'WETH');
     _limitOrder = new LimitOrderProtocol(IWETH(address(_weth)));
     _amountGetter = new DecayCurveAmountGetter();
+    _feeTaker = new FeeTaker(_deployer, new address[](0), address(_weth), address(_limitOrder));
     _token0 = new ERC20Mock();
     _token1 = new ERC20Mock();
     vm.label(_maker, 'Maker');
@@ -66,20 +86,38 @@ abstract contract BaseTest is Test {
 
     _token0.mint(_maker, 100_000 ether);
     _token1.mint(_taker, 100_000 ether);
+    deal(address(_weth), _maker, 100_000 ether);
+    deal(address(_weth), _taker, 100_000 ether);
+    deal(address(_weth), 200_000 ether);
 
-    vm.prank(_maker);
+    vm.startPrank(_maker);
     _token0.approve(address(_limitOrder), type(uint256).max);
-    vm.prank(_taker);
+    _weth.approve(address(_limitOrder), type(uint256).max);
+    vm.stopPrank();
+
+    vm.startPrank(_taker);
     _token1.approve(address(_limitOrder), type(uint256).max);
+    _weth.approve(address(_limitOrder), type(uint256).max);
+    vm.stopPrank();
+
+    address[] memory whitelistedRecipients = new address[](5);
+    whitelistedRecipients[0] = _alice;
+    whitelistedRecipients[1] = _bob;
+    whitelistedRecipients[2] = _charlie;
+    whitelistedRecipients[3] = _david;
+    whitelistedRecipients[4] = _eve;
+
+    vm.prank(_deployer);
+    _feeTaker.whitelistRecipients(whitelistedRecipients, true);
 
     vm.warp(_baseTimestamp);
   }
 
-  function _buildExtension(bytes memory makingAmountData, bytes memory takingAmountData)
-    internal
-    view
-    returns (bytes memory)
-  {
+  function _buildExtension(
+    bytes memory makingAmountData,
+    bytes memory takingAmountData,
+    bytes memory postInteractionData
+  ) internal view returns (bytes memory) {
     if (makingAmountData.length > 0) {
       makingAmountData = bytes.concat(bytes20(address(_amountGetter)), makingAmountData);
     }
@@ -87,6 +125,12 @@ abstract contract BaseTest is Test {
       takingAmountData = bytes.concat(bytes20(address(_amountGetter)), takingAmountData);
     }
     takingAmountData = bytes.concat(bytes20(address(_amountGetter)), takingAmountData);
+    if (takingAmountData.length > 0) {
+      takingAmountData = bytes.concat(bytes20(address(_amountGetter)), takingAmountData);
+    }
+    if (postInteractionData.length > 0) {
+      postInteractionData = bytes.concat(bytes20(address(_feeTaker)), postInteractionData);
+    }
     return ExtensionBuilder.buildExtension({
       makerAssetSuffix: '',
       takerAssetSuffix: '',
@@ -95,7 +139,7 @@ abstract contract BaseTest is Test {
       predicate: '',
       permit: '',
       preInteraction: '',
-      postInteraction: '',
+      postInteraction: postInteractionData,
       customData: ''
     });
   }
