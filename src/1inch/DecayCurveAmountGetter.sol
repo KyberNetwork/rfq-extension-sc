@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity 0.8.30;
 
 import {CalldataDecoder} from 'ks-common-sc/src/libraries/calldata/CalldataDecoder.sol';
 import {
@@ -64,6 +64,8 @@ contract DecayCurveAmountGetter is AmountGetterBase {
       uint256 confidence =
         ((block.timestamp - startTime) * WAD) / (order.makerTraits.getExpirationTime() - startTime);
       uint256 reductionAmount;
+      // Step 2: Calculate reduction amount
+      // Formula: R0 * (c^E) * A / 1e36
       // gas savings for exponent is a multiple of 1e18
       if (exponent % WAD == 0) {
         reductionAmount = (makingAmount * amplificationFactor) / WAD;
@@ -72,8 +74,6 @@ contract DecayCurveAmountGetter is AmountGetterBase {
           reductionAmount = (reductionAmount * confidence) / WAD;
         }
       } else {
-        // Step 2: Calculate reduction amount
-        // Formula: R0 * (c^E) * A / 1e36
         // Both amplificationFactor and powWad output are WAD, so divide by WAD^2 to rescale
         reductionAmount =
           (makingAmount
