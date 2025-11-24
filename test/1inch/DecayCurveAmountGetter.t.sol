@@ -16,7 +16,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
   using MakerTraitsLib for MakerTraits;
 
   /* Test corresponds to the Desmos curve visualization: https://www.desmos.com/calculator/klbg4dubcu */
-  function testFuzz_WeightedAmountGetter(
+  function testFuzz_DecayCurveAmountGetter(
     uint256 takingAmount,
     uint256 makingAmount, /* R0 */
     uint256 expiration, /* D */
@@ -59,7 +59,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     assertEq(takerBalanceAfter, makingAmountFilled);
   }
 
-  function testFuzz_WeightedAmountGetter_MultipleFills(
+  function testFuzz_DecayCurveAmountGetter_MultipleFills(
     uint256 takingAmount,
     uint256 makingAmount,
     uint256 expiration,
