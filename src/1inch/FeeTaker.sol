@@ -33,8 +33,6 @@ contract FeeTaker is
   uint256 constant BPS = 10_000;
   address private immutable LIMIT_ORDER_PROTOCOL;
 
-  mapping(address => bool) public whitelistedRecipients;
-
   modifier onlyLimitOrderProtocol() {
     if (msg.sender != LIMIT_ORDER_PROTOCOL) revert OnlyLimitOrderProtocol();
     _;
@@ -49,16 +47,6 @@ contract FeeTaker is
     _batchGrantRole(KSRoles.RESCUER_ROLE, initialRescuers);
     WETH = IWETH(_WETH);
     LIMIT_ORDER_PROTOCOL = _LIMIT_ORDER_PROTOCOL;
-  }
-
-  function whitelistRecipients(address[] calldata _recipients, bool _grantOrRevoke)
-    external
-    onlyRole(DEFAULT_ADMIN_ROLE)
-  {
-    for (uint256 i = 0; i < _recipients.length; i++) {
-      whitelistedRecipients[_recipients[i]] = _grantOrRevoke;
-      emit WhitelistUpdated(_recipients[i], _grantOrRevoke);
-    }
   }
 
   function postInteraction(
@@ -76,32 +64,17 @@ contract FeeTaker is
     address maker = order.maker.get();
     address takingToken = order.takerAsset.get();
 
-    uint256 profitAmount =
-      takingAmount > distribution.expectedAmount ? takingAmount - distribution.expectedAmount : 0;
+    uint256 transferAmount =
+      takingAmount < distribution.expectedAmount ? takingAmount : distribution.expectedAmount;
 
     if (distribution.unwrapWeth) {
-      WETH.withdraw(takingAmount - profitAmount);
-      TokenHelper.safeTransferNative(maker, takingAmount - profitAmount);
+      WETH.withdraw(transferAmount);
+      TokenHelper.safeTransferNative(maker, transferAmount);
     } else {
-      takingToken.safeTransfer(maker, takingAmount - profitAmount);
+      takingToken.safeTransfer(maker, transferAmount);
     }
 
-    if (profitAmount != 0) {
-      uint256 remainingProfit = profitAmount;
-      for (uint256 i = 0; i < distribution.recipients.length; i++) {
-        if (!whitelistedRecipients[distribution.recipients[i]]) {
-          revert NotWhitelisted();
-        }
-
-        uint256 recipientAmount = (profitAmount * distribution.shareBps[i]) / BPS;
-        recipientAmount = remainingProfit < recipientAmount ? remainingProfit : recipientAmount;
-
-        takingToken.safeTransfer(distribution.recipients[i], recipientAmount);
-        remainingProfit -= recipientAmount;
-
-        emit ProfitDistributed(orderHash, takingToken, distribution.recipients[i], recipientAmount);
-      }
-    }
+    emit TakingAmountTransferred(orderHash, takingToken, maker, transferAmount);
   }
 
   receive() external payable {}

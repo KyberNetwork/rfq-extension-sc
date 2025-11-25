@@ -107,9 +107,6 @@ abstract contract BaseTest is Test {
     whitelistedRecipients[3] = _david;
     whitelistedRecipients[4] = _eve;
 
-    vm.prank(_deployer);
-    _feeTaker.whitelistRecipients(whitelistedRecipients, true);
-
     vm.warp(_baseTimestamp);
   }
 
