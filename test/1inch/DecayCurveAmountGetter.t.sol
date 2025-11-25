@@ -22,7 +22,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     uint256 expiration = 120; /* D */
     uint256 startTime = 20; /* T */
     uint256 blockTimestamp = 60; /* t */
-    uint256 amplificationFactor = 0.5e18; /* A */
+    uint256 amplificationFactor = 0.3e18; /* A */
     uint256 exponent = 2e18; /* E */
     vm.warp(blockTimestamp);
 
@@ -38,7 +38,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     (uint256 makingAmountFilled, uint256 takingAmountFilled,) =
       _limitOrder.fillOrderArgs(order, r, vs, takingAmount, takerTraits, extension);
 
-    assertEq(makingAmountFilled, 92 ether);
+    assertEq(makingAmountFilled, 95.2 ether);
     assertEq(takingAmountFilled, 100 ether);
   }
 
