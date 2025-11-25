@@ -180,14 +180,15 @@ contract DecayCurveAmountGetterTest is BaseTest {
     uint256 expiration,
     uint256 amplificationFactor
   ) public {
+    vm.warp(0);
     takingAmount = bound(takingAmount, 1_000_000, 100_000 ether);
     makingAmount = bound(makingAmount, 1_000_000, 100_000 ether);
-    expiration = bound(expiration, block.timestamp + 1 days, block.timestamp + 2 days);
-    uint256 startTime = block.timestamp;
+    expiration = bound(expiration, 1 days, 2 days);
+    uint256 startTime = 0;
     amplificationFactor = bound(amplificationFactor, 0.4e18, 0.9e18);
     uint256 exponent = 1;
     _flags = [_HAS_EXTENSION_FLAG];
-    vm.warp((startTime + expiration) / 2);
+    vm.warp(startTime + 0.5 days);
 
     bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
     bytes memory extension = _buildExtension(extraData, '');
@@ -293,7 +294,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     makingAmount = bound(makingAmount, 1e6, 1000 ether);
     expiration = bound(expiration, 50, 100);
     amplificationFactor = bound(amplificationFactor, 0.1e6, 0.5e6);
-    uint256 startTime = block.timestamp;
+    uint256 startTime = 0;
     exponent = bound(exponent, 1, 4);
     _flags = [_HAS_EXTENSION_FLAG];
     vm.warp(bound(amplificationFactor, startTime, expiration));
