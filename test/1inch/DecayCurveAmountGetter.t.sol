@@ -15,7 +15,50 @@ import {DecayCurveAmountGetter} from 'src/1inch/DecayCurveAmountGetter.sol';
 contract DecayCurveAmountGetterTest is BaseTest {
   using MakerTraitsLib for MakerTraits;
 
-  /* Test corresponds to the Desmos curve visualization: https://www.desmos.com/calculator/klbg4dubcu */
+  /* Test corresponds to the default parameters of the Desmos curve visualization: https://www.desmos.com/calculator/klbg4dubcu */
+  function testConcrete_DecayCurveAmountGetter() public {
+    uint256 takingAmount = 100 ether;
+    uint256 makingAmount = 100 ether; /* R0 */
+    uint256 expiration = 120; /* D */
+    uint256 startTime = 20; /* T */
+    uint256 blockTimestamp = 60; /* t */
+    uint256 amplificationFactor = 0.5e18; /* A */
+    uint256 exponent = 2e18; /* E */
+    vm.warp(blockTimestamp);
+
+    _flags = [_HAS_EXTENSION_FLAG];
+
+    bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
+    bytes memory extension = _buildExtension(extraData, '');
+    IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
+    (, bytes32 r, bytes32 vs) = _signOrder(order);
+    TakerTraits takerTraits = _buildTakerTraits(extension.length);
+
+    vm.prank(_taker);
+    (uint256 makingAmountFilled, uint256 takingAmountFilled,) =
+      _limitOrder.fillOrderArgs(order, r, vs, takingAmount, takerTraits, extension);
+
+    assertEq(makingAmountFilled, 92 ether);
+    assertEq(takingAmountFilled, 100 ether);
+  }
+
+  function testRescue() public {
+    deal(address(_token0), address(_amountGetter), 100 ether);
+    address[] memory tokens = new address[](1);
+    tokens[0] = address(_token0);
+    uint256[] memory amounts = new uint256[](1);
+    amounts[0] = 100 ether;
+    vm.prank(makeAddr('admin'));
+    _amountGetter.rescueERC20s(tokens, amounts, makeAddr('rescuer'));
+
+    assertEq(_token0.balanceOf(makeAddr('rescuer')), 100 ether);
+
+    deal(address(_token0), address(_amountGetter), 100 ether);
+    vm.prank(makeAddr('random'));
+    vm.expectRevert();
+    _amountGetter.rescueERC20s(tokens, amounts, makeAddr('random'));
+  }
+
   function testFuzz_DecayCurveAmountGetter(
     uint256 takingAmount,
     uint256 makingAmount, /* R0 */
@@ -137,14 +180,15 @@ contract DecayCurveAmountGetterTest is BaseTest {
     uint256 expiration,
     uint256 amplificationFactor
   ) public {
+    vm.warp(0);
     takingAmount = bound(takingAmount, 1_000_000, 100_000 ether);
     makingAmount = bound(makingAmount, 1_000_000, 100_000 ether);
-    expiration = bound(expiration, block.timestamp + 1 days, block.timestamp + 2 days);
-    uint256 startTime = block.timestamp;
+    expiration = bound(expiration, 1 days, 2 days);
+    uint256 startTime = 0;
     amplificationFactor = bound(amplificationFactor, 0.4e18, 0.9e18);
     uint256 exponent = 1;
     _flags = [_HAS_EXTENSION_FLAG];
-    vm.warp((startTime + expiration) / 2);
+    vm.warp(startTime + 0.5 days);
 
     bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
     bytes memory extension = _buildExtension(extraData, '');
@@ -250,7 +294,7 @@ contract DecayCurveAmountGetterTest is BaseTest {
     makingAmount = bound(makingAmount, 1e6, 1000 ether);
     expiration = bound(expiration, 50, 100);
     amplificationFactor = bound(amplificationFactor, 0.1e6, 0.5e6);
-    uint256 startTime = block.timestamp;
+    uint256 startTime = 0;
     exponent = bound(exponent, 1, 4);
     _flags = [_HAS_EXTENSION_FLAG];
     vm.warp(bound(amplificationFactor, startTime, expiration));

@@ -53,7 +53,7 @@ abstract contract BaseTest is Test {
 
     _weth = new WrappedTokenMock('Wrapped Ether', 'WETH');
     _limitOrder = new LimitOrderProtocol(IWETH(address(_weth)));
-    _amountGetter = new DecayCurveAmountGetter();
+    _amountGetter = new DecayCurveAmountGetter(makeAddr('admin'));
     _token0 = new ERC20Mock();
     _token1 = new ERC20Mock();
     vm.label(_maker, 'Maker');
