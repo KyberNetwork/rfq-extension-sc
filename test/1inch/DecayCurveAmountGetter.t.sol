@@ -15,7 +15,50 @@ import {DecayCurveAmountGetter} from 'src/1inch/DecayCurveAmountGetter.sol';
 contract DecayCurveAmountGetterTest is BaseTest {
   using MakerTraitsLib for MakerTraits;
 
-  /* Test corresponds to the Desmos curve visualization: https://www.desmos.com/calculator/klbg4dubcu */
+  /* Test corresponds to the default parameters of the Desmos curve visualization: https://www.desmos.com/calculator/klbg4dubcu */
+  function testConcrete_DecayCurveAmountGetter() public {
+    uint256 takingAmount = 100 ether;
+    uint256 makingAmount = 100 ether; /* R0 */
+    uint256 expiration = 120; /* D */
+    uint256 startTime = 20; /* T */
+    uint256 blockTimestamp = 60; /* t */
+    uint256 amplificationFactor = 0.5e18; /* A */
+    uint256 exponent = 2e18; /* E */
+    vm.warp(blockTimestamp);
+
+    _flags = [_HAS_EXTENSION_FLAG];
+
+    bytes memory extraData = abi.encode(startTime, exponent, amplificationFactor);
+    bytes memory extension = _buildExtension(extraData, '');
+    IOrderMixin.Order memory order = _buildOrder(extension, takingAmount, makingAmount, expiration);
+    (, bytes32 r, bytes32 vs) = _signOrder(order);
+    TakerTraits takerTraits = _buildTakerTraits(extension.length);
+
+    vm.prank(_taker);
+    (uint256 makingAmountFilled, uint256 takingAmountFilled,) =
+      _limitOrder.fillOrderArgs(order, r, vs, takingAmount, takerTraits, extension);
+
+    assertEq(makingAmountFilled, 92 ether);
+    assertEq(takingAmountFilled, 100 ether);
+  }
+
+  function testRescue() public {
+    deal(address(_token0), address(_amountGetter), 100 ether);
+    address[] memory tokens = new address[](1);
+    tokens[0] = address(_token0);
+    uint256[] memory amounts = new uint256[](1);
+    amounts[0] = 100 ether;
+    vm.prank(makeAddr('admin'));
+    _amountGetter.rescueERC20s(tokens, amounts, makeAddr('rescuer'));
+
+    assertEq(_token0.balanceOf(makeAddr('rescuer')), 100 ether);
+
+    deal(address(_token0), address(_amountGetter), 100 ether);
+    vm.prank(makeAddr('random'));
+    vm.expectRevert();
+    _amountGetter.rescueERC20s(tokens, amounts, makeAddr('random'));
+  }
+
   function testFuzz_DecayCurveAmountGetter(
     uint256 takingAmount,
     uint256 makingAmount, /* R0 */

@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import {
+  KSRoles,
+  ManagementBase,
+  ManagementRescuable
+} from 'ks-common-sc/src/base/ManagementRescuable.sol';
 import {CalldataDecoder} from 'ks-common-sc/src/libraries/calldata/CalldataDecoder.sol';
 import {
   AmountGetterBase,
@@ -15,7 +20,7 @@ import {
 } from 'limit-order-protocol/contracts/libraries/MakerTraitsLib.sol';
 import {FixedPointMathLib} from 'solady/src/utils/FixedPointMathLib.sol';
 
-contract DecayCurveAmountGetter is AmountGetterBase {
+contract DecayCurveAmountGetter is AmountGetterBase, ManagementRescuable {
   using MakerTraitsLib for MakerTraits;
   using FixedPointMathLib for int256;
   using CalldataDecoder for bytes;
@@ -27,6 +32,8 @@ contract DecayCurveAmountGetter is AmountGetterBase {
 
   uint256 public constant WAD = 1e18;
   uint256 public constant MAX_EXPONENT = 4e18;
+
+  constructor(address initialAdmin) ManagementBase(0, initialAdmin) {}
 
   /**
    * @notice Calculates the adjusted making amount based on time-weighted decay curve
