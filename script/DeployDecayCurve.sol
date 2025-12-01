@@ -5,7 +5,7 @@ import 'ks-common-sc/script/Base.s.sol';
 import 'src/1inch/DecayCurveAmountGetter.sol';
 
 contract DeployDecayCurveScript is BaseScript {
-  string salt = '251030';
+  string salt = '251201';
 
   /**
    * @dev Deploys DecayCurveAmountGetter contract to specified chains
