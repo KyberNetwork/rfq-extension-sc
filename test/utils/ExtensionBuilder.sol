@@ -74,10 +74,11 @@ library ExtensionBuilder {
     );
   }
 
-  function buildExtensionWithInteractions(
-    bytes memory preInteraction,
-    bytes memory postInteraction
-  ) internal pure returns (bytes memory extension) {
+  function buildExtensionWithInteractions(bytes memory preInteraction, bytes memory postInteraction)
+    internal
+    pure
+    returns (bytes memory extension)
+  {
     return buildExtension(
       '', // makerAssetSuffix
       '', // takerAssetSuffix

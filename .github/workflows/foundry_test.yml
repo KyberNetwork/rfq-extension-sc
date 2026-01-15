@@ -10,7 +10,7 @@ on:
 jobs:
   foundry_test:
     name: Run Foundry tests
-    runs-on: self-hosted
+    runs-on: ${{ github.event.repository.private && 'self-hosted' || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,7 +31,7 @@ jobs:
       - name: Install Foundry
         uses: KyberNetwork/foundry-toolchain@master
         with:
-          version: v1.4.2
+          version: v1.5.0
 
       - name: Run Foundry tests
         run: forge test -vvv

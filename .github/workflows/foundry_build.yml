@@ -12,7 +12,7 @@ jobs:
     # Task name
     name: Run Foundry build
 
-    runs-on: self-hosted
+    runs-on: ${{ github.event.repository.private && 'self-hosted' || 'ubuntu-latest' }}
 
     # List of steps
     steps:
@@ -35,7 +35,7 @@ jobs:
       - name: Install Foundry
         uses: KyberNetwork/foundry-toolchain@master
         with:
-          version: v1.4.2
+          version: v1.5.0
 
       - name: Run Forge build
         run: |
