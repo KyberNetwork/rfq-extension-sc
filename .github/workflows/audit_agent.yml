@@ -5,7 +5,7 @@ on:
 
 jobs:
     quick-scan:
-      runs-on: ubuntu-latest
+      runs-on: ${{ github.event.repository.private && 'self-hosted' || 'ubuntu-latest' }}
       env:
         AUDIT_AGENT_TOKEN: ${{ secrets.AUDIT_AGENT_TOKEN }}
       steps:

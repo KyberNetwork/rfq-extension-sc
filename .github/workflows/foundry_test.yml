@@ -10,7 +10,7 @@ on:
 jobs:
   foundry_test:
     name: Run Foundry tests
-    runs-on: self-hosted
+    runs-on: ${{ github.event.repository.private && 'self-hosted' || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
         with:

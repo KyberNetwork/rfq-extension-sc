@@ -12,7 +12,7 @@ jobs:
     # Task name
     name: Run Foundry build
 
-    runs-on: self-hosted
+    runs-on: ${{ github.event.repository.private && 'self-hosted' || 'ubuntu-latest' }}
 
     # List of steps
     steps:
