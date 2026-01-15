@@ -17,7 +17,7 @@ jobs:
       - name: Install Foundry
         uses: KyberNetwork/foundry-toolchain@master
         with:
-          version: v1.4.2
+          version: v1.5.0
 
       - name: Run lint
         run: forge fmt --check
